@@ -1,11 +1,12 @@
 import { useQuery } from "react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import styled from "styled-components";
-import { getMovies, IMovie } from "../api";
+import { getMovies, IMovie, popMovies } from "../api";
 import { makeImgPath } from "../utils";
 import { useEffect, useState } from "react";
 
 const Wrapper = styled.div`
+  display: grid;
   background: black;
   overflow-x: hidden;
 `;
@@ -44,15 +45,35 @@ const Overview = styled.p`
   font-size: 1.3vw;
 `;
 
-const Slider = styled(motion.div)`
+const Sliders = styled.div`
+  display: grid;
+  gap: 200px;
+  grid-template-rows: repeat(2, 1fr); //슬라이드가 추가되면 수정
   position: relative;
-  top: -120px;
+  top: -220px;
+  margin-left: 50px;
+  margin-right: 10px;
+`;
+
+const NowPlayingSlider = styled(motion.div)`
+  margin-bottom: 50px;
+`;
+const PopSlider = styled(motion.div)`
+  margin-bottom: 50px;
+`;
+const NowPlayingTitle = styled.div`
+  font-size: 30px;
+  margin: 0 0 20px 0;
+`;
+const PopPlayingTitle = styled.div`
+  font-size: 30px;
+  margin: 0 0 20px 0;
 `;
 
 const Row = styled(motion.div)`
   display: grid;
   grid-gap: 5px;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   position: absolute;
   width: 100%;
 `;
@@ -63,6 +84,25 @@ const Box = styled(motion.div)<{ bgPhoto: string }>`
   background-image: url(${(props) => props.bgPhoto});
   background-position: center center;
   background-size: cover;
+  &:first-child {
+    transform-origin: center left;
+  }
+  &:last-child {
+    transform-origin: center right;
+  }
+`;
+
+const Info = styled(motion.div)`
+  padding: 10px;
+  background-color: ${(props) => props.theme.black.lighter};
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  h4 {
+    text-align: center;
+    font-size: 18px;
+  }
 `;
 
 const rowVariants = {
@@ -71,25 +111,70 @@ const rowVariants = {
   exit: { x: -window.innerWidth + 10 },
 };
 
+const boxVariants = {
+  normal: {
+    scale: 1,
+  },
+  hover: {
+    scale: 1.3,
+    y: -30,
+    transition: {
+      delay: 0.5,
+      duaration: 0.1,
+      type: "tween",
+    },
+  },
+};
+
+const infoVariants = {
+  hover: {
+    opacity: 1,
+    transition: {
+      delay: 0.5,
+      duaration: 0.1,
+      type: "tween",
+    },
+  },
+};
+
 //슬라이드에 한번에 나올 아이템의 갯수
-const offset = 6;
+const offset = 5;
 
 function Home() {
-  const { data, isLoading } = useQuery<IMovie>(
+  const { data: now, isLoading: nowLoding } = useQuery<IMovie>(
     ["movies", "nowPlaying"],
     getMovies
   );
-  const [index, setIndex] = useState(0);
-  const [leaving, setLeaving] = useState(false);
-  const IncreaseIndex = () => {
-    if (data) {
-      if (leaving) {
+  const { data: pop, isLoading: popLoding } = useQuery<IMovie>(
+    ["movies", "pop"],
+    popMovies
+  );
+  const [nowIndex, setNowIndex] = useState(0);
+  const [nowLeaving, setNowLeaving] = useState(false);
+  const IncreaseIndexNow = () => {
+    if (now) {
+      if (nowLeaving) {
         return;
       } else {
-        setLeaving(true);
-        let totalMoives = data?.results.length - 1;
+        setNowLeaving(true);
+        let totalMoives = now?.results.length - 1;
         let maxIndex = Math.floor(totalMoives / offset) - 1;
-        setIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
+        setNowIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
+      }
+    }
+  };
+
+  const [popIndex, setPopIndex] = useState(0);
+  const [popLeaving, setPopLeaving] = useState(false);
+  const IncreaseIndexPop = () => {
+    if (pop) {
+      if (popLeaving) {
+        return;
+      } else {
+        setPopLeaving(true);
+        let totalMoives = pop?.results.length - 1;
+        let maxIndex = Math.floor(totalMoives / offset) - 1;
+        setPopIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
       }
     }
   };
@@ -109,46 +194,92 @@ function Home() {
 
   return (
     <Wrapper>
-      {isLoading ? (
+      {nowLoding ? (
         <Loader>Loading...</Loader>
       ) : (
         <>
-          <Banner
-            onClick={IncreaseIndex}
-            bgPhoto={makeImgPath(data?.results[0].backdrop_path || "")}
-          >
+          <Banner bgPhoto={makeImgPath(now?.results[0].backdrop_path || "")}>
             <TextContent>
-              <Title>{data?.results[0].title}</Title>
+              <Title>{now?.results[0].title}</Title>
               {resize > 900 ? (
-                <Overview>{data?.results[0].overview}</Overview>
+                <Overview>{now?.results[0].overview}</Overview>
               ) : null}
             </TextContent>
           </Banner>
-          <Slider>
-            <AnimatePresence
-              initial={false}
-              onExitComplete={() => setLeaving((prev) => !prev)}
-            >
-              <Row
-                variants={rowVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                transition={{ type: "tween", duration: 1 }}
-                key={index}
+          <Sliders>
+            <NowPlayingSlider>
+              <NowPlayingTitle onClick={IncreaseIndexNow}>
+                Now Playing
+              </NowPlayingTitle>
+              <AnimatePresence
+                initial={false}
+                onExitComplete={() => setNowLeaving((prev) => !prev)}
               >
-                {data?.results
-                  .slice(1)
-                  .slice(offset * index, offset * index + offset)
-                  .map((movie) => (
-                    <Box
-                      key={movie.id}
-                      bgPhoto={makeImgPath(movie.backdrop_path, "w500")}
-                    />
-                  ))}
-              </Row>
-            </AnimatePresence>
-          </Slider>
+                <Row
+                  variants={rowVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ type: "tween", duration: 1 }}
+                  key={nowIndex}
+                >
+                  {now?.results
+                    .slice(1)
+                    .slice(offset * nowIndex, offset * nowIndex + offset)
+                    .map((movie) => (
+                      <Box
+                        variants={boxVariants}
+                        initial="nomal"
+                        whileHover="hover"
+                        transition={{ type: "tween" }}
+                        key={movie.id}
+                        bgPhoto={makeImgPath(movie.backdrop_path, "w500")}
+                      >
+                        <Info variants={infoVariants}>
+                          <div>{movie.title}</div>
+                        </Info>
+                      </Box>
+                    ))}
+                </Row>
+              </AnimatePresence>
+            </NowPlayingSlider>
+            <PopSlider>
+              <PopPlayingTitle onClick={IncreaseIndexPop}>
+                Pop Playing
+              </PopPlayingTitle>
+              <AnimatePresence
+                initial={false}
+                onExitComplete={() => setPopLeaving((prev) => !prev)}
+              >
+                <Row
+                  variants={rowVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ type: "tween", duration: 1 }}
+                  key={popIndex}
+                >
+                  {pop?.results
+                    .slice(1)
+                    .slice(offset * popIndex, offset * popIndex + offset)
+                    .map((movie) => (
+                      <Box
+                        variants={boxVariants}
+                        initial="nomal"
+                        whileHover="hover"
+                        transition={{ type: "tween" }}
+                        key={movie.id}
+                        bgPhoto={makeImgPath(movie.backdrop_path, "w500")}
+                      >
+                        <Info variants={infoVariants}>
+                          <div>{movie.title}</div>
+                        </Info>
+                      </Box>
+                    ))}
+                </Row>
+              </AnimatePresence>
+            </PopSlider>
+          </Sliders>
         </>
       )}
     </Wrapper>
