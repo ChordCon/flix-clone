@@ -1,4 +1,4 @@
-const API_KEY = "5a71fb6d85ed9ac1e0026dd94a1f6a9e";
+export const API_KEY = "5a71fb6d85ed9ac1e0026dd94a1f6a9e";
 const BASE_PATH = "https://api.themoviedb.org/3";
 
 export interface Dates {
