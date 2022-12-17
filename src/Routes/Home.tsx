@@ -4,9 +4,9 @@ import styled from "styled-components";
 import { getMovies, IMovie, popMovies } from "../api";
 import { makeImgPath } from "../utils";
 import { useEffect, useState } from "react";
+import { useNavigate, useMatch } from "react-router-dom";
 
 const Wrapper = styled.div`
-  display: grid;
   background: black;
   overflow-x: hidden;
 `;
@@ -20,9 +20,9 @@ const Loader = styled.div`
 const Banner = styled.div<{ bgPhoto: string }>`
   height: 100vh;
   display: flex;
+  padding: 60px;
   flex-direction: column;
   justify-content: center;
-  padding: 60px;
   background-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 1)),
     url(${(props) => props.bgPhoto});
   background-size: cover;
@@ -32,7 +32,6 @@ const Banner = styled.div<{ bgPhoto: string }>`
 const TextContent = styled.div`
   width: 40%;
   padding: 20px;
-  border: none;
   border-radius: 70px;
   background: radial-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
 `;
@@ -47,40 +46,39 @@ const Overview = styled.p`
 
 const Sliders = styled.div`
   display: grid;
-  gap: 200px;
-  grid-template-rows: repeat(2, 1fr); //슬라이드가 추가되면 수정
+  grid-gap: 25vw;
   position: relative;
-  top: -220px;
-  margin-left: 50px;
-  margin-right: 10px;
+  top: -250px;
+  margin-bottom: 20vw;
 `;
 
 const NowPlayingSlider = styled(motion.div)`
-  margin-bottom: 50px;
+  position: relative;
+  margin: 3vw;
 `;
 const PopSlider = styled(motion.div)`
-  margin-bottom: 50px;
+  position: relative;
+  margin: 3vw;
 `;
 const NowPlayingTitle = styled.div`
+  margin-bottom: 10px;
   font-size: 30px;
-  margin: 0 0 20px 0;
 `;
-const PopPlayingTitle = styled.div`
+const PopPlayingTitle = styled(motion.div)`
+  margin-bottom: 10px;
   font-size: 30px;
-  margin: 0 0 20px 0;
 `;
 
 const Row = styled(motion.div)`
   display: grid;
-  grid-gap: 5px;
-  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  grid-template-columns: repeat(6, 1fr);
   position: absolute;
   width: 100%;
 `;
 
 const Box = styled(motion.div)<{ bgPhoto: string }>`
-  background-color: white;
-  height: 200px;
+  height: 25vw;
   background-image: url(${(props) => props.bgPhoto});
   background-position: center center;
   background-size: cover;
@@ -90,25 +88,43 @@ const Box = styled(motion.div)<{ bgPhoto: string }>`
   &:last-child {
     transform-origin: center right;
   }
+  cursor: pointer;
 `;
 
 const Info = styled(motion.div)`
   padding: 10px;
-  background-color: ${(props) => props.theme.black.lighter};
   opacity: 0;
   position: absolute;
-  width: 100%;
   bottom: 0;
+  width: 100%;
   h4 {
     text-align: center;
     font-size: 18px;
   }
 `;
 
+const Overlay = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(0, 0, 0);
+`;
+const MovieModal = styled(motion.div)`
+  position: fixed;
+  width: 60vw;
+  height: 70vh;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+`;
+
 const rowVariants = {
-  hidden: { x: window.innerWidth - 10 },
+  hidden: { x: window.innerWidth + 5 },
   visible: { x: 0 },
-  exit: { x: -window.innerWidth + 10 },
+  exit: { x: -window.innerWidth - 5 },
 };
 
 const boxVariants = {
@@ -128,7 +144,9 @@ const boxVariants = {
 
 const infoVariants = {
   hover: {
+    backgroundColor: "#2F2F2F",
     opacity: 1,
+    marginTop: "25vw",
     transition: {
       delay: 0.5,
       duaration: 0.1,
@@ -137,14 +155,21 @@ const infoVariants = {
   },
 };
 
+const overlayVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 0.7 },
+  exit: { opacity: 0 },
+};
+
 //슬라이드에 한번에 나올 아이템의 갯수
-const offset = 5;
+const offset = 6;
 
 function Home() {
   const { data: now, isLoading: nowLoding } = useQuery<IMovie>(
     ["movies", "nowPlaying"],
     getMovies
   );
+  console.log(now);
   const { data: pop, isLoading: popLoding } = useQuery<IMovie>(
     ["movies", "pop"],
     popMovies
@@ -185,16 +210,26 @@ function Home() {
     setResize(window.innerWidth);
   };
 
+  const navigate = useNavigate();
+  const modarMatch = useMatch("/movies/:id");
+  const onBoxClicked = (movieId: string) => {
+    navigate(`/movies/${movieId}`);
+  };
+
+  const onOverlayClick = () => {
+    navigate("/");
+  };
+
   useEffect(() => {
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-
+  console.log(modarMatch);
   return (
     <Wrapper>
-      {nowLoding ? (
+      {nowLoding && popLoding ? (
         <Loader>Loading...</Loader>
       ) : (
         <>
@@ -228,12 +263,14 @@ function Home() {
                     .slice(offset * nowIndex, offset * nowIndex + offset)
                     .map((movie) => (
                       <Box
+                        layoutId={`${movie.id}now`}
+                        onClick={() => onBoxClicked(`${movie.id}now`)}
                         variants={boxVariants}
                         initial="nomal"
                         whileHover="hover"
                         transition={{ type: "tween" }}
                         key={movie.id}
-                        bgPhoto={makeImgPath(movie.backdrop_path, "w500")}
+                        bgPhoto={makeImgPath(movie.poster_path, "w500")}
                       >
                         <Info variants={infoVariants}>
                           <div>{movie.title}</div>
@@ -243,14 +280,15 @@ function Home() {
                 </Row>
               </AnimatePresence>
             </NowPlayingSlider>
+
             <PopSlider>
-              <PopPlayingTitle onClick={IncreaseIndexPop}>
-                Pop Playing
-              </PopPlayingTitle>
               <AnimatePresence
                 initial={false}
                 onExitComplete={() => setPopLeaving((prev) => !prev)}
               >
+                <PopPlayingTitle onClick={IncreaseIndexPop}>
+                  Pop Playing
+                </PopPlayingTitle>
                 <Row
                   variants={rowVariants}
                   initial="hidden"
@@ -264,12 +302,14 @@ function Home() {
                     .slice(offset * popIndex, offset * popIndex + offset)
                     .map((movie) => (
                       <Box
+                        layoutId={`${movie.id}pop`}
+                        onClick={() => onBoxClicked(`${movie.id}pop`)}
                         variants={boxVariants}
                         initial="nomal"
                         whileHover="hover"
                         transition={{ type: "tween" }}
                         key={movie.id}
-                        bgPhoto={makeImgPath(movie.backdrop_path, "w500")}
+                        bgPhoto={makeImgPath(movie.poster_path, "w500")}
                       >
                         <Info variants={infoVariants}>
                           <div>{movie.title}</div>
@@ -280,6 +320,27 @@ function Home() {
               </AnimatePresence>
             </PopSlider>
           </Sliders>
+          <AnimatePresence>
+            {modarMatch ? (
+              <>
+                <Overlay
+                  variants={overlayVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  onClick={onOverlayClick}
+                ></Overlay>
+                <MovieModal
+                  style={{
+                    backgroundColor: "white",
+                  }}
+                  layoutId={modarMatch.params.id}
+                >
+                  modal
+                </MovieModal>
+              </>
+            ) : null}
+          </AnimatePresence>
         </>
       )}
     </Wrapper>
