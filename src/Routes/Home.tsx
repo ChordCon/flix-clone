@@ -113,14 +113,44 @@ const Overlay = styled(motion.div)`
 const MovieModal = styled(motion.div)`
   position: fixed;
   width: 60vw;
-  height: 70vh;
+  height: 90vh;
   top: 0;
   bottom: 0;
   left: 0;
   right: 0;
   margin: auto;
+  background-color: black;
+  border: 3px solid ${(props) => props.theme.white.darker};
+  border-radius: 20px;
 `;
 
+const MovieModalImg = styled(motion.div)`
+  width: 100%;
+  background-size: cover;
+  background-position: center center;
+  height: 400px;
+  border-radius: 20px 20px 0 0;
+`;
+const MovieModalInfo = styled(motion.div)`
+  color: ${(props) => props.theme.white.lighter};
+  padding: 20px;
+`;
+const MovieModalInfoTop = styled(motion.div)`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+`;
+const ModalInfoTopTitle = styled(motion.span)`
+  font-weight: 500;
+  font-size: 28px;
+`;
+const MovieModalInfoMid = styled(motion.div)``;
+const MovieModalInfoBottom = styled(motion.div)`
+  text-align: right;
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+`;
 const rowVariants = {
   hidden: { x: window.innerWidth + 5 },
   visible: { x: 0 },
@@ -169,7 +199,6 @@ function Home() {
     ["movies", "nowPlaying"],
     getMovies
   );
-  console.log(now);
   const { data: pop, isLoading: popLoding } = useQuery<IMovie>(
     ["movies", "pop"],
     popMovies
@@ -220,13 +249,23 @@ function Home() {
     navigate("/");
   };
 
+  //슬라이더가 더 늘어 나면 수정필요.
+  let modarMatchTrans = modarMatch?.params.id?.slice(0, -3);
+  const clickedMovie = modarMatch?.params.id?.includes("now")
+    ? modarMatchTrans &&
+      now?.results.find((movie) => movie.id + "" === modarMatchTrans)
+    : modarMatchTrans &&
+      pop?.results.find((movie) => movie.id + "" === modarMatchTrans);
+  let objClickedMovie = eval("(" + JSON.stringify(clickedMovie) + ")");
+  console.log(objClickedMovie);
+
   useEffect(() => {
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-  console.log(modarMatch);
+
   return (
     <Wrapper>
       {nowLoding && popLoding ? (
@@ -330,13 +369,33 @@ function Home() {
                   exit="exit"
                   onClick={onOverlayClick}
                 ></Overlay>
-                <MovieModal
-                  style={{
-                    backgroundColor: "white",
-                  }}
-                  layoutId={modarMatch.params.id}
-                >
-                  modal
+                <MovieModal layoutId={modarMatch.params.id}>
+                  <MovieModalImg
+                    style={{
+                      backgroundImage: `url(${makeImgPath(
+                        objClickedMovie.backdrop_path,
+                        "w500"
+                      )})`,
+                    }}
+                  ></MovieModalImg>
+                  <MovieModalInfo>
+                    <MovieModalInfoTop>
+                      <ModalInfoTopTitle>
+                        {objClickedMovie.title}
+                      </ModalInfoTopTitle>
+                      <span style={{ alignItems: "center", display: "flex" }}>
+                        {objClickedMovie.adult ? "Adult 🔴" : "Adult 🟢"}
+                      </span>
+                    </MovieModalInfoTop>
+                    <MovieModalInfoMid>
+                      <p>{objClickedMovie.overview}</p>
+                    </MovieModalInfoMid>
+                    <MovieModalInfoBottom>
+                      <div>Vote average : {objClickedMovie.vote_average}</div>
+                      <div>Vote count : {objClickedMovie.vote_count}</div>
+                      <div>Release date : {objClickedMovie.release_date}</div>
+                    </MovieModalInfoBottom>
+                  </MovieModalInfo>
                 </MovieModal>
               </>
             ) : null}
