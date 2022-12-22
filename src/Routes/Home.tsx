@@ -111,6 +111,7 @@ const Overlay = styled(motion.div)`
   background-color: rgb(0, 0, 0);
 `;
 const MovieModal = styled(motion.div)`
+  z-index: 100;
   position: fixed;
   width: 60vw;
   height: 90vh;
@@ -151,10 +152,42 @@ const MovieModalInfoBottom = styled(motion.div)`
   right: 20px;
   bottom: 20px;
 `;
+
+const GoLeft = styled.div`
+  padding: 2px;
+  position: absolute;
+  left: -20px;
+  height: 25vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px 0 0 10px;
+`;
+const GoRight = styled.div`
+  padding: 2px;
+  position: absolute;
+  right: -20px;
+  height: 25vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 0 10px 10px 0;
+`;
+
 const rowVariants = {
-  hidden: { x: window.innerWidth + 5 },
+  hidden: (movingDirection: boolean) => {
+    return {
+      x: movingDirection ? window.innerWidth + 5 : -window.innerWidth - 5,
+    };
+  },
   visible: { x: 0 },
-  exit: { x: -window.innerWidth - 5 },
+  exit: (movingDirection: boolean) => {
+    return {
+      x: !movingDirection ? window.innerWidth + 5 : -window.innerWidth - 5,
+    };
+  },
 };
 
 const boxVariants = {
@@ -195,6 +228,7 @@ const overlayVariants = {
 const offset = 6;
 
 function Home() {
+  const [movingDirection, setMovingDirection] = useState(false);
   const { data: now, isLoading: nowLoding } = useQuery<IMovie>(
     ["movies", "nowPlaying"],
     getMovies
@@ -207,6 +241,7 @@ function Home() {
   const [nowLeaving, setNowLeaving] = useState(false);
   const IncreaseIndexNow = () => {
     if (now) {
+      setMovingDirection(true);
       if (nowLeaving) {
         return;
       } else {
@@ -218,6 +253,20 @@ function Home() {
     }
   };
 
+  const decreaseIndexNow = () => {
+    if (now) {
+      setMovingDirection(false);
+      if (nowLeaving) {
+        return;
+      } else {
+        setNowLeaving(true);
+        let totalMoives = now?.results.length - 1;
+        let maxIndex = Math.floor(totalMoives / offset) - 1;
+        setNowIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
+      }
+    }
+  };
+
   const [popIndex, setPopIndex] = useState(0);
   const [popLeaving, setPopLeaving] = useState(false);
   const IncreaseIndexPop = () => {
@@ -225,10 +274,25 @@ function Home() {
       if (popLeaving) {
         return;
       } else {
+        setMovingDirection(true);
         setPopLeaving(true);
         let totalMoives = pop?.results.length - 1;
         let maxIndex = Math.floor(totalMoives / offset) - 1;
         setPopIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
+      }
+    }
+  };
+
+  const decreaseIndexPop = () => {
+    if (pop) {
+      if (popLeaving) {
+        return;
+      } else {
+        setMovingDirection(false);
+        setPopLeaving(true);
+        let totalMoives = pop?.results.length - 1;
+        let maxIndex = Math.floor(totalMoives / offset) - 1;
+        setPopIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
       }
     }
   };
@@ -282,14 +346,15 @@ function Home() {
           </Banner>
           <Sliders>
             <NowPlayingSlider>
-              <NowPlayingTitle onClick={IncreaseIndexNow}>
-                Now Playing
-              </NowPlayingTitle>
+              <NowPlayingTitle>Now Playing</NowPlayingTitle>
               <AnimatePresence
                 initial={false}
                 onExitComplete={() => setNowLeaving((prev) => !prev)}
+                custom={movingDirection}
               >
+                <GoLeft onClick={IncreaseIndexNow}>◁</GoLeft>
                 <Row
+                  custom={movingDirection}
                   variants={rowVariants}
                   initial="hidden"
                   animate="visible"
@@ -317,6 +382,7 @@ function Home() {
                       </Box>
                     ))}
                 </Row>
+                <GoRight onClick={decreaseIndexNow}>▷</GoRight>
               </AnimatePresence>
             </NowPlayingSlider>
 
@@ -324,12 +390,13 @@ function Home() {
               <AnimatePresence
                 initial={false}
                 onExitComplete={() => setPopLeaving((prev) => !prev)}
+                custom={movingDirection}
               >
-                <PopPlayingTitle onClick={IncreaseIndexPop}>
-                  Pop Playing
-                </PopPlayingTitle>
+                <PopPlayingTitle>Pop Playing</PopPlayingTitle>
+                <GoLeft onClick={IncreaseIndexPop}>◁</GoLeft>
                 <Row
                   variants={rowVariants}
+                  custom={movingDirection}
                   initial="hidden"
                   animate="visible"
                   exit="exit"
@@ -356,6 +423,7 @@ function Home() {
                       </Box>
                     ))}
                 </Row>
+                <GoRight onClick={decreaseIndexPop}>▷</GoRight>
               </AnimatePresence>
             </PopSlider>
           </Sliders>
