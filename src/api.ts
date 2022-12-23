@@ -6,7 +6,7 @@ export interface Dates {
   minimum: string;
 }
 
-export interface Result {
+export interface ResultMovie {
   adult: boolean;
   backdrop_path: string;
   genre_ids: number[];
@@ -26,7 +26,29 @@ export interface Result {
 export interface IMovie {
   dates: Dates;
   page: number;
-  results: Result[];
+  results: ResultMovie[];
+  total_pages: number;
+  total_results: number;
+}
+
+export interface ResultTv {
+  backdrop_path: string;
+  first_air_date: string;
+  genre_ids: number[];
+  id: number;
+  name: string;
+  origin_country: string[];
+  original_language: string;
+  original_name: string;
+  overview: string;
+  popularity: number;
+  poster_path: string;
+  vote_average: number;
+  vote_count: number;
+}
+export interface ITv {
+  page: number;
+  results: ResultTv[];
   total_pages: number;
   total_results: number;
 }
@@ -40,5 +62,17 @@ export function getMovies() {
 export function popMovies() {
   return fetch(
     `${BASE_PATH}/movie/popular?api_key=${API_KEY}&language=en-US&page=1&region=kr`
+  ).then((response) => response.json());
+}
+
+export function topRated() {
+  return fetch(
+    `${BASE_PATH}/tv/top_rated?api_key=${API_KEY}&language=kr&page=1`
+  ).then((response) => response.json());
+}
+
+export function onTheAir() {
+  return fetch(
+    `${BASE_PATH}/tv/on_the_air?api_key=${API_KEY}&language=kr&page=1`
   ).then((response) => response.json());
 }
