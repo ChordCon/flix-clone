@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { wrap } from "popmotion";
 import styled from "styled-components";
@@ -20,6 +20,7 @@ const Sliders = styled.div`
   position: relative;
   top: -500px;
   padding: 20px;
+  margin: 0 2vw;
 `;
 const Slider = styled(motion.div)`
   width: 100vw;
@@ -28,19 +29,6 @@ const Slider = styled(motion.div)`
   display: flex;
   justify-content: center;
   align-items: center;
-`;
-
-const Buttons = styled.div`
-  background: white;
-  width: 12px;
-  height: 25vw;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  user-select: none;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 18px;
 `;
 
 const Banner = styled.div<{ bgPhoto: string }>`
@@ -54,6 +42,21 @@ const Banner = styled.div<{ bgPhoto: string }>`
   background-size: cover;
   background-position: center center;
 `;
+const TextContent = styled.div`
+  width: 40%;
+  padding: 20px;
+  border-radius: 70px;
+  background: radial-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+`;
+
+const Title = styled.h2`
+  font-size: 5.3vw;
+  margin-bottom: 20px;
+`;
+const Overview = styled.p`
+  font-size: 1.3vw;
+`;
+
 const Box = styled(motion.div)<{ bgPhoto: string }>`
   margin: 10px;
   width: 100%;
@@ -105,8 +108,8 @@ const GoRight = styled.div`
 const TopTitle = styled.div`
   position: relative;
   margin: 15px;
-  font-size: 5vw;
-  top: -15vw;
+  font-size: 4vw;
+  top: -14vw;
 `;
 
 const variants = {
@@ -149,6 +152,20 @@ const boxVariants = {
   },
 };
 
+const infoVariants = {
+  hover: {
+    backgroundColor: "#2F2F2F",
+    opacity: 1,
+    marginTop: "25vw",
+    y: 40,
+    transition: {
+      delay: 0.5,
+      duaration: 0.1,
+      type: "tween",
+    },
+  },
+};
+
 const swipeConfidenceThreshold = window.innerWidth;
 const swipePower = (offset: number, velocity: number) => {
   return Math.abs(offset) * velocity;
@@ -163,7 +180,7 @@ function Tv() {
     ["tv", "onAir"],
     onTheAir
   );
-
+  console.log(tvTopRated);
   const [[page, direction], setPage] = useState([0, 0]);
   const index = wrap(0, tvTopRated?.results.length!, page);
 
@@ -189,6 +206,17 @@ function Tv() {
     navigate("/");
   };
 
+  const [resize, setResize] = useState(window.innerWidth);
+
+  const handleResize = () => {
+    setResize(window.innerWidth);
+  };
+  useEffect(() => {
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
   return (
     <Wrap>
       <Banner
@@ -197,7 +225,14 @@ function Tv() {
             ? makeImgPath(tvTopRated?.results[0].backdrop_path)
             : makeImgPath(tvTopRated?.results[0].poster_path!)
         }
-      ></Banner>
+      >
+        <TextContent>
+          <Title>{tvTopRated?.results[0].name}</Title>
+          {resize > 900 ? (
+            <Overview>{tvTopRated?.results[0].overview}</Overview>
+          ) : null}
+        </TextContent>
+      </Banner>
       <TopTitle>TopRated</TopTitle>
       <Sliders>
         <GoLeft onClick={() => paginate(5)}>{"<"}</GoLeft>
@@ -225,16 +260,20 @@ function Tv() {
               }
             }}
           >
-            {tvTopSliderItems.map((movie) => (
+            {tvTopSliderItems.map((tv) => (
               <Box
-                layoutId={`${movie?.id}top`}
-                onClick={() => onBoxClicked(`${movie?.id}top`)}
+                layoutId={`${tv?.id}top`}
+                onClick={() => onBoxClicked(`${tv?.id}top`)}
                 variants={boxVariants}
                 initial="nomal"
                 whileHover="hover"
-                key={movie?.id}
-                bgPhoto={makeImgPath(movie?.poster_path!, "w500")}
-              ></Box>
+                key={tv?.id}
+                bgPhoto={makeImgPath(tv?.poster_path!, "w500")}
+              >
+                <Info variants={infoVariants}>
+                  <div>{tv?.name}</div>
+                </Info>
+              </Box>
             ))}
           </Slider>
         </AnimatePresence>
